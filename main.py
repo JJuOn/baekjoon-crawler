@@ -1,10 +1,14 @@
-from selenium import webdriver 
+from __future__ import print_function
+from selenium import webdriver
+from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from getpass import getpass
 from time import sleep
 from bs4 import BeautifulSoup
 import os
 import requests
 import datetime
+import winreg as reg
+import sys
 
 if __name__=="__main__":
     print("="*25)
@@ -15,7 +19,11 @@ if __name__=="__main__":
     print("="*25)
     userId=input("백준 ID를 입력해 주세요. : ")
     password=getpass("백준 PW를 입력해 주세요. : ")
-    driver=webdriver.Chrome('./chromedriver/chromedriver.exe')
+    try:
+        driver=webdriver.Chrome('./chromedriver/chromedriver.exe')
+    except SessionNotCreatedException:
+        print("chromedriver의 버전이 맞지 않습니다.\nhttps://chromedriver.chromium.org/downloads에서 현재 chrome의 버전에 맞는 chromedriver를 설치해 주세요.",file=sys.stderr)
+        exit(1)
     driver.implicitly_wait(3)
     driver.get('https://acmicpc.net/login?next=%2F')
     driver.find_element_by_name('login_user_id').send_keys(userId)
