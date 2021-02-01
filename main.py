@@ -105,7 +105,7 @@ def save_log(log,path,problemNo,soultionLength):
     file=open(path,'w')
     file.write(json.dumps(log))
     file.close()
-    print('log saved')
+    # print('log saved')
     return log
 
 
