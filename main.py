@@ -4,11 +4,18 @@ from selenium.common.exceptions import SessionNotCreatedException, WebDriverExce
 from getpass import getpass
 from time import sleep
 from bs4 import BeautifulSoup
+from multiprocessing import cpu_count
+from tqdm import tqdm
+
 import os
 import requests
 import datetime
 import sys
 import json
+import parmap
+
+import numpy as np
+
 
 def print_explaination(order,problemListLen=None):
     if order==0:
@@ -105,7 +112,6 @@ def save_log(log,path,problemNo,soultionLength):
     file=open(path,'w')
     file.write(json.dumps(log))
     file.close()
-    # print('log saved')
     return log
 
 
@@ -127,11 +133,10 @@ def get_extension(language):
         extension="php"
     return extension
 
-def get_source(problemList,option):
+def get_source(problemList,option,userId,cookies):
     dirname=datetime.datetime.now().strftime("%Y%m%d")
     log=get_log('log.json')
-    for i,problem in enumerate(problemList):
-        print("{}> ({}%)".format("="*int(max((i+1)/len(problemList)*20,1)),int((i+1)/len(problemList)*100)),end="\r")
+    for problem in problemList:
         response=requests.get("https://www.acmicpc.net/status?from_mine=1&problem_id={}&user_id={}".format(problem,userId),cookies=cookies).text
         soup=BeautifulSoup(response,'html.parser')
         trs=soup.select('html > body > div.wrapper > div.container.content > div.row > div.col-md-12 > div.table-responsive > table#status-table > tbody > tr')
@@ -143,10 +148,8 @@ def get_source(problemList,option):
         soup=BeautifulSoup(response,'html.parser')
         source=soup.select("textarea#source")
         source=source[0].text
-        # print('Processing...\tproblem:{}\tlength:{}\tlanguage:{}'.format(problem,len(source),language))
         # skip condition
         if option=='2' and check_log(log,problem,len(source)):
-            # print('skip')
             continue
         extension=get_extension(language)
         if not os.path.exists('./{}/{}~{}'.format(dirname,int(problem)//1000*1000,(int(problem)//1000+1)*1000-1)):
@@ -161,7 +164,9 @@ if __name__=="__main__":
     userId,password=login()
     cookies=get_cookies(userId,password)
     cookies,problemList=get_problem_list(cookies)
+    problemListLen=len(problemList)
     print_explaination(1,len(problemList))
-    get_source(problemList,option)
+    splitedProblemList=np.array_split(problemList,cpu_count())
+    splitedProblemList=[x.tolist() for x in splitedProblemList]
+    parmap.map(get_source,splitedProblemList,option,userId,cookies,pm_pbar=True,pm_processes=cpu_count())
     input("작업이 완료되었습니다. 아무 키를 눌러 종료해 주세요.")
-    
