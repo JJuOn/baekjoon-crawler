@@ -121,16 +121,24 @@ def get_extension(language):
         extension="cpp"
     elif "Java" in language:
         extension="java"
-    elif "Python" in language:
+    elif "Python" in language or "PyPy" in language:
         extension="py"
-    elif "C" in language:
-        extension="c"
+    elif "C#" in language:
+        extension="cs"
     elif "node.js" in language:
         extension="js"
     elif "Golfscript" in language:
         extension="gs"
     elif "PHP" in language:
         extension="php"
+    elif "Ruby" in language:
+        extension="rb"
+    elif "Kotlin" in language:
+        extension="kt"
+    elif "C" in language:
+        extension="c"
+    elif "Go" in language:
+        extension="go"
     return extension
 
 def get_source(problemList,option,userId,cookies):
