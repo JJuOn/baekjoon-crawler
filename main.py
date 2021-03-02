@@ -38,13 +38,22 @@ def print_explaination(order,problemListLen=None):
         dirname=datetime.datetime.now().strftime("%Y%m%d")
         print("{}\\{}에 {}개의 문제가 1000개씩 묶여 한 폴더에 저장됩니다.".format(os.getcwd(),dirname,problemListLen))
         print("지원되는 확장자는 다음과 같습니다.")
-        print("C++:.cpp")
-        print("Java:.java")
-        print("Python:.py")
-        print("C:.c")
-        print("node.js:.js")
-        print("Golfscript:.gs")
-        print("PHP:.php")
+        extensions=[
+            {'name':'C++','extension':'cpp'},
+            {'name':'Java','extension':'java'},
+            {'name':'Python','extension':'py'},
+            {'name':'C','extension':'c'},
+            {'name':'PyPy','extension':'py'},
+            {'name':'C#','extension':'cs'},
+            {'name':'node.js','extension':'js'},
+            {'name':'PHP','extension':'php'},
+            {'name':'Ruby','extension':'rb'},
+            {'name':'Kotlin','extension':'kt'},
+            {'name':'Go','extension':'go'},
+            {'name':'Golfscript','extension':'gs'}
+        ]
+        for e in extensions:
+            print('{} : .{}'.format(e['name'],e['extension']))
         input("아무 키를 눌러 진행해 주세요. ")
         if not os.path.exists('./{}'.format(dirname)):
             os.mkdir(dirname)
@@ -75,6 +84,7 @@ def get_cookies(userId,password):
     driver.quit()
     return cookies
 
+
 def get_problem_list(cookies):
     for cookie in cookies:
         if cookie['name']=='OnlineJudge':
@@ -87,6 +97,7 @@ def get_problem_list(cookies):
     for problemListTag in problemListTags:
         problemList.append(problemListTag.text)
     return cookies, problemList
+
 
 def get_log(path='log.json'):
     if not os.path.exists(path):
