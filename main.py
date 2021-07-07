@@ -2,17 +2,17 @@ from __future__ import print_function
 from selenium import webdriver
 from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from getpass import getpass
-from time import sleep
 from bs4 import BeautifulSoup
 from multiprocessing import cpu_count
 from tqdm import tqdm
+from functools import partial
+from multiprocessing.dummy import Pool as ThreadPool
 
 import os
 import requests
 import datetime
 import sys
 import json
-import parmap
 
 import numpy as np
 
@@ -67,7 +67,28 @@ def login():
     return userId, password
 
 
+def session_validataion(cookies):
+    for cookie in cookies:
+        if cookie['name']=='OnlineJudge':
+            cookies={'OnlineJudge':cookie['value']}
+            break
+    response=requests.get('https://www.acmicpc.net/',cookies=cookies).text
+    soup=BeautifulSoup(response,'html.parser')
+    if len(soup.select('a.username'))!=0:
+        return True
+    else:
+        return False
+
+
 def get_cookies(userId,password):
+    existFileButNotUser=False
+    if os.path.exists('./user.json'):
+        userFile=open('./user.json','r')
+        userDict=json.loads(userFile.read())
+        if userId in userDict:
+            if session_validataion([{'name':'OnlineJudge','value':userDict[userId]}]):
+                return [{'name':'OnlineJudge','value':userDict[userId]}]
+        existFileButNotUser=True
     try:
         driver=webdriver.Chrome('./chromedriver/chromedriver.exe')
     except SessionNotCreatedException:
@@ -82,6 +103,28 @@ def get_cookies(userId,password):
     input("CAPTCHA를 푸셨으면 아무 키나 눌러 주세요. ")
     cookies=driver.get_cookies()
     driver.quit()
+
+    if not os.path.exists('./user.json'):
+        value=""
+        for cookie in cookies:
+            if cookie['name']=="OnlineJudge":
+                value=cookie['value']
+        file=open('./user.json','w')
+        file.write(json.dumps({userId:value}))
+        file.close()
+
+    elif existFileButNotUser:
+        value=""
+        for cookie in cookies:
+            if cookie['name']=="OnlineJudge":
+                value=cookie['value']
+        file=open('./user.json','r')
+        userDict=json.loads(file.read())
+        userDict[userId]=value
+        file.close()
+        file=open('./user.json','w')
+        file.write(json.dumps(userDict))
+        file.close()
     return cookies
 
 
@@ -101,25 +144,34 @@ def get_problem_list(cookies):
 
 def get_log(path='log.json'):
     if not os.path.exists(path):
-        log=dict()
+        log=list()
     else:
         file=open(path,'r')
         log=json.loads(file.read())
         file.close()
+        if isinstance(log,dict):
+            li=[]
+            for key in log.keys():
+                li.append({'problemNo':key,'solutionLength':log[key]})
+            log=li
+            file=open(path,'w')
+            file.write(json.dumps(log))
+            file.close()
     return log
 
 
 def check_log(log,problemNo,soultionLength):
-    if problemNo in log:
-        # if True, skip saving
-        return log[problemNo]==soultionLength
-    else:
-        # it means new problem
-        return False
+    for elem in log:
+        if elem['problemNo']==problemNo:
+            if elem['solutionLength']==soultionLength:
+                return True
+            else:
+                return False
+    return False
 
 
-def save_log(log,path,problemNo,soultionLength):
-    log[problemNo]=soultionLength
+def save_log(log,path,problemNo,solutionLength):
+    log.append({'problemNo':problemNo,'solutionLength':solutionLength})
     file=open(path,'w')
     file.write(json.dumps(log))
     file.close()
@@ -152,7 +204,7 @@ def get_extension(language):
         extension="go"
     return extension
 
-def get_source(problemList,option,userId,cookies):
+def get_source(problemList,option,userId,cookies,progress_bar):
     dirname=datetime.datetime.now().strftime("%Y%m%d")
     log=get_log('log.json')
     for problem in problemList:
@@ -167,6 +219,7 @@ def get_source(problemList,option,userId,cookies):
         soup=BeautifulSoup(response,'html.parser')
         source=soup.select("textarea#source")
         source=source[0].text
+        progress_bar.update(1)
         # skip condition
         if option=='2' and check_log(log,problem,len(source)):
             continue
@@ -187,5 +240,8 @@ if __name__=="__main__":
     print_explaination(1,len(problemList))
     splitedProblemList=np.array_split(problemList,cpu_count())
     splitedProblemList=[x.tolist() for x in splitedProblemList]
-    parmap.map(get_source,splitedProblemList,option,userId,cookies,pm_pbar=True,pm_processes=cpu_count())
+    pool=ThreadPool(processes=cpu_count())
+    with tqdm(total=problemListLen) as progress_bar:
+        get_source_partial=partial(get_source,option=option,userId=userId,cookies=cookies,progress_bar=progress_bar)
+        pool.map(get_source_partial,splitedProblemList)
     input("작업이 완료되었습니다. 아무 키를 눌러 종료해 주세요.")
