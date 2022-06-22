@@ -3,4 +3,4 @@ selenium==3.141.0
 requests==2.24.0
 tqdm==4.47.0
 parmap==1.5.2
-numpy==1.20.1
+numpy==1.22.0
