@@ -1,6 +1,6 @@
-beautifulsoup4==4.9.1
-selenium==3.141.0
-requests==2.24.0
-tqdm==4.47.0
-parmap==1.5.2
-numpy==1.20.1
+bs4
+selenium
+requests
+tqdm
+parmap
+numpy
